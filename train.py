@@ -31,7 +31,8 @@ dataset_dir = '../OneraDataset_Images/'
 labels_dir = '../OneraDataset_TrainLabels/'
 save_dir = '../models/'
 frozen_dir = save_dir + 'frozen_models/'
-model_name = 'EF_UNet_bce'
+#model_name = 'EF_UNet_bce'
+model_name = 'EF_UNetPP_DS'
 history_name = model_name + '_history'
 
 
@@ -61,12 +62,13 @@ inputs = np.asarray(train_images)
 labels = np.asarray(train_labels)
 
 #Create the model
-#model = cdm.EF_UNetPP([img_size,img_size,2*channels], classes)
-model = cdm.EF_UNet([img_size,img_size,2*channels], classes)
+model = cdm.EF_UNetPP([img_size,img_size,2*channels], classes, True)
+# model = cdm.EF_UNet([img_size,img_size,2*channels], classes)
 model.summary()
 
 # Train the model
-history = model.fit(inputs, labels, batch_size=batch_size, epochs=epochs, validation_split=0.1, callbacks=[EarlyStopping(monitor='val_loss', patience=5, verbose=1, restore_best_weights=True)], shuffle=True, verbose=1)
+# history = model.fit(inputs, labels, batch_size=batch_size, epochs=epochs, validation_split=0.1, callbacks=[EarlyStopping(monitor='val_loss', patience=5, verbose=1, restore_best_weights=True)], shuffle=True, verbose=1)
+history = model.fit(inputs, 5*[labels], batch_size=batch_size, epochs=epochs, validation_split=0.1, callbacks=[EarlyStopping(monitor='val_loss', patience=5, verbose=1, restore_best_weights=True)], shuffle=True, verbose=1)
 
 # Save the history for accuracy/loss plotting
 history_save = pd.DataFrame(history.history).to_hdf(save_dir + history_name + ".h5", "history", append=False)

@@ -50,11 +50,11 @@ def UNetPP_ConvUnit(input_tensor, stage, nb_filter, kernel_size=3, mode='None'):
     return x
 
 
-def EF_UNetPP(input_shape, classes=1):
+def EF_UNetPP(input_shape, classes=1, deep_supervision=False):
     mode='residual'
     nb_filter = [32, 64, 128, 256, 512]
     bn_axis = 3
-    
+
     inputs = Input(shape=input_shape, name='input')
     
     conv1_1 = UNetPP_ConvUnit(inputs, stage='11', nb_filter=nb_filter[0], mode=mode)
@@ -111,21 +111,31 @@ def EF_UNetPP(input_shape, classes=1):
     conv1_5 = concatenate([up1_5, conv1_1, conv1_2, conv1_3, conv1_4], name='merge15', axis=bn_axis)
     conv1_5 = UNetPP_ConvUnit(conv1_5, stage='15', nb_filter=nb_filter[0], mode=mode)
 
-#    nestnet_output_1 = Conv2D(num_class, (1, 1), activation='sigmoid', name='output_1',
-#                              kernel_initializer='he_normal', padding='same', kernel_regularizer=l2(1e-4))(conv1_2)
-#    nestnet_output_2 = Conv2D(num_class, (1, 1), activation='sigmoid', name='output_2',
-#                              kernel_initializer='he_normal', padding='same', kernel_regularizer=l2(1e-4))(conv1_3)
-#    nestnet_output_3 = Conv2D(num_class, (1, 1), activation='sigmoid', name='output_3',
-#                              kernel_initializer='he_normal', padding='same', kernel_regularizer=l2(1e-4))(conv1_4)
-#    nestnet_output_4 = Conv2D(num_class, (1, 1), activation='sigmoid', name='output_4',
-#                              kernel_initializer='he_normal', padding='same', kernel_regularizer=l2(1e-4))(conv1_5)
+    nestnet_output_1 = Conv2D(classes, (1, 1), activation='sigmoid', name='output_1', kernel_initializer='he_normal',
+                            padding='same', kernel_regularizer=l2(1e-4))(conv1_2)
+    nestnet_output_2 = Conv2D(classes, (1, 1), activation='sigmoid', name='output_2', kernel_initializer='he_normal',
+                            padding='same', kernel_regularizer=l2(1e-4))(conv1_3)
+    nestnet_output_3 = Conv2D(classes, (1, 1), activation='sigmoid', name='output_3', kernel_initializer='he_normal',
+                            padding='same', kernel_regularizer=l2(1e-4))(conv1_4)
+    nestnet_output_4 = Conv2D(classes, (1, 1), activation='sigmoid', name='output_4', kernel_initializer='he_normal',
+                            padding='same', kernel_regularizer=l2(1e-4))(conv1_5)
 
     conv_fuse = concatenate([conv1_2, conv1_3, conv1_4, conv1_5], name='merge_fuse', axis=bn_axis)
-    output = Conv2D(classes, (1, 1), activation='sigmoid', name='output', kernel_initializer='he_normal', padding='same', kernel_regularizer=l2(1e-4))(conv_fuse)
+    nestnet_output_5 = Conv2D(classes, (1, 1), activation='sigmoid', name='output_5', kernel_initializer='he_normal',
+                            padding='same', kernel_regularizer=l2(1e-4))(conv_fuse)
     
-    model = Model(input=inputs, output=output)
-    model.compile(optimizer=Adam(lr=1e-4), loss=weighted_bce_dice_loss, metrics=['accuracy'])
-    
+    if deep_supervision:
+        model = Model(input=inputs, output=[nestnet_output_1, nestnet_output_2, nestnet_output_3, nestnet_output_4, nestnet_output_5])
+        model.compile(optimizer=Adam(lr=1e-4),
+                      loss=[weighted_bce_dice_loss, weighted_bce_dice_loss, weighted_bce_dice_loss,
+                            weighted_bce_dice_loss, weighted_bce_dice_loss],
+                      loss_weights=[0.5, 0.5, 0.75, 0.5, 1.0],
+                      metrics=['accuracy']
+                      )
+    else:
+        model = Model(input=inputs, output=[nestnet_output_4])
+        model.compile(optimizer=Adam(lr=1e-4), loss=weighted_bce_dice_loss,
+                      metrics=['accuracy'])
     return model
 
 

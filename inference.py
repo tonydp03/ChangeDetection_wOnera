@@ -1,7 +1,7 @@
 # coding: utf-8
 
 """
-Train a CD UNet++ model for Onera Dataset, available @ http://dase.grss-ieee.org
+Perform inference with a CD UNet++ model for Onera Dataset, available @ http://dase.grss-ieee.org
 
 @Author: Tony Di Pilato
 
@@ -31,19 +31,21 @@ labels_dir = '../OneraDataset_TrainLabels/'
 
 save_dir = '../models/'
 # model_name = 'EF_UNet_wbce'
-model_name = 'EF_UNet_bce'
+model_name = 'EF_UNetPP'
+# model_name = 'EF_UNetPP_DS'
 
 infres_dir = '../results/'
 history_name = model_name + '_history'
 
 # Get the list of folders to open to get rasters
-folders = rnc.get_folderList(dataset_dir + 'test.txt')
+# folders = rnc.get_folderList(dataset_dir + 'test.txt')
+folders = rnc.get_folderList(dataset_dir + 'train.txt')
 
 # Select a folder, build raster, pad it and crop it to get the input images
 test_image = []
 
 #f = random.choice(folders)
-f = 'lasvegas'
+f = 'rennes'
 
 raster1 = rnc.build_raster(dataset_dir + f + '/imgs_1_rect/')
 raster2 = rnc.build_raster(dataset_dir + f + '/imgs_2_rect/')
@@ -55,8 +57,8 @@ test_image = rnc.crop(padded_raster, img_size, stride)
 inputs = np.asarray(test_image)
 
 # Load model
-# model = load_model(save_dir + model_name + '.h5', custom_objects={'weighted_bce_dice_loss': cdm.weighted_bce_dice_loss})
-model = load_model(save_dir + model_name + '.h5')
+model = load_model(save_dir + model_name + '.h5', custom_objects={'weighted_bce_dice_loss': cdm.weighted_bce_dice_loss})
+# model = load_model(save_dir + model_name + '.h5')
 model.summary()
 
 print("Model loaded!")
@@ -65,6 +67,7 @@ print("Model loaded!")
 results = model.predict(inputs)
 
 # Build the complete change map
+# results = results[4] # This should be used if DS enabled
 shape = (padded_raster.shape[0], padded_raster.shape[1], classes)
 padded_cm = rnc.uncrop(shape, results, img_size, stride)
 cm = rnc.unpad(raster.shape,padded_cm)
