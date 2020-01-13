@@ -1,7 +1,7 @@
 # coding: utf-8
 
 """
-Perform inference with a CD UNet++ model for Onera Dataset, available @ http://dase.grss-ieee.org
+Perform inference with a CD UNet/UNet++ model for Onera Dataset, available @ http://dase.grss-ieee.org
 
 @Author: Tony Di Pilato
 
@@ -30,22 +30,20 @@ dataset_dir = '../OneraDataset_Images/'
 labels_dir = '../OneraDataset_TrainLabels/'
 
 save_dir = '../models/'
-# model_name = 'EF_UNet_wbce'
-model_name = 'EF_UNetPP'
+model_name = 'EF_UNet_wbce'
+# model_name = 'EF_UNetPP'
 # model_name = 'EF_UNetPP_DS'
 
 infres_dir = '../results/'
 history_name = model_name + '_history'
 
 # Get the list of folders to open to get rasters
-# folders = rnc.get_folderList(dataset_dir + 'test.txt')
-folders = rnc.get_folderList(dataset_dir + 'train.txt')
+folders = rnc.get_folderList(dataset_dir + 'test.txt')
+# folders = rnc.get_folderList(dataset_dir + 'train.txt')
 
 # Select a folder, build raster, pad it and crop it to get the input images
-test_image = []
-
-#f = random.choice(folders)
-f = 'rennes'
+f = random.choice(folders)
+# f = 'rennes'
 
 raster1 = rnc.build_raster(dataset_dir + f + '/imgs_1_rect/')
 raster2 = rnc.build_raster(dataset_dir + f + '/imgs_2_rect/')
@@ -65,7 +63,7 @@ print("Model loaded!")
 
 # Perform inference
 results = model.predict(inputs)
-
+print("ResShape", results.shape)
 # Build the complete change map
 # results = results[4] # This should be used if DS enabled
 shape = (padded_raster.shape[0], padded_raster.shape[1], classes)
@@ -73,11 +71,11 @@ padded_cm = rnc.uncrop(shape, results, img_size, stride)
 cm = rnc.unpad(raster.shape,padded_cm)
 
 cm = np.squeeze(cm)
-cm = np.rint(cm) # we are only interested in change/nochange
+cm = np.rint(cm) # we are only interested in change/unchange
 
 # Plot and save the change map
 fig = plt.imshow(cm, cmap='gray')
 plt.axis('off')
 fig.axes.get_xaxis().set_visible(False)
 fig.axes.get_yaxis().set_visible(False)
-plt.savefig(infres_dir + f + '_' + model_name + '.png', bbox_inches = 'tight', pad_inches = 0)
+# plt.savefig(infres_dir + f + '_' + model_name + '.png', bbox_inches = 'tight', pad_inches = 0)

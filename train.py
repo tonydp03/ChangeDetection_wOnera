@@ -1,7 +1,7 @@
 # coding: utf-8
 
 """
-Train a CD UNet++ model for Onera Dataset, available @ http://dase.grss-ieee.org
+Train a CD UNet/UNet++ model for Onera Dataset, available @ http://dase.grss-ieee.org
 
 @Author: Tony Di Pilato
 
