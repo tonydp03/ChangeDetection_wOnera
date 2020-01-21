@@ -31,14 +31,23 @@ def build_rasterRGB(folder):
     raster = np.stack(bands, axis=2)    
     return raster
 
-def pad(img, crop_size, stride):
+# def pad(img, crop_size, stride):
+#     h, w, c = img.shape
+#     n_h = int(h/stride)
+#     n_w = int(w/stride)
+#     w_extra = w - (n_w * stride)
+#     w_toadd = crop_size - w_extra
+#     h_extra = h - (n_h * stride)
+#     h_toadd = crop_size - h_extra
+#     img_pad = np.pad(img, [(0, h_toadd), (0, w_toadd), (0,0)], mode='constant')
+#     return img_pad
+
+def pad(img, crop_size):
     h, w, c = img.shape
-    n_h = int(h/stride)
-    n_w = int(w/stride)
-    w_extra = w - (n_w * stride)
-    w_toadd = crop_size - w_extra
-    h_extra = h - (n_h * stride)
-    h_toadd = crop_size - h_extra
+    n_h = int(h/crop_size)
+    n_w = int(w/crop_size)
+    w_toadd = (n_w+1) * crop_size - w
+    h_toadd = (n_h+1) * crop_size - h
     img_pad = np.pad(img, [(0, h_toadd), (0, w_toadd), (0,0)], mode='constant')
     return img_pad
 

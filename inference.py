@@ -8,7 +8,6 @@ Perform inference with a CD UNet/UNet++ model for Onera Dataset, available @ htt
 Created on Fri Dec 13, 2019
 """
 
-
 import os
 import read_and_crop as rnc
 import numpy as np
@@ -21,17 +20,17 @@ import matplotlib.pyplot as plt
 import random
 
 
-img_size = 128
+img_size =  128 #256
 channels = 13
-stride = 128
+stride = 128 #256
 classes = 1
 
 dataset_dir = '../OneraDataset_Images/'
 labels_dir = '../OneraDataset_TrainLabels/'
 
 save_dir = '../models/'
-model_name = 'EF_UNet_wbce'
-# model_name = 'EF_UNetPP'
+model_name = 'EF_UNet_bce_ol64'
+# model_name = 'EF_UNet_wbce-256_ol64'
 # model_name = 'EF_UNetPP_DS'
 
 infres_dir = '../results/'
@@ -42,13 +41,13 @@ folders = rnc.get_folderList(dataset_dir + 'test.txt')
 # folders = rnc.get_folderList(dataset_dir + 'train.txt')
 
 # Select a folder, build raster, pad it and crop it to get the input images
-f = random.choice(folders)
-# f = 'rennes'
+# f = random.choice(folders)
+f = 'lasvegas'
 
 raster1 = rnc.build_raster(dataset_dir + f + '/imgs_1_rect/')
 raster2 = rnc.build_raster(dataset_dir + f + '/imgs_2_rect/')
 raster = np.concatenate((raster1,raster2), axis=2)
-padded_raster = rnc.pad(raster, img_size, stride)
+padded_raster = rnc.pad(raster, img_size)
 test_image = rnc.crop(padded_raster, img_size, stride)
 
 # Create inputs for the Neural Network
@@ -68,7 +67,7 @@ print("ResShape", results.shape)
 # results = results[4] # This should be used if DS enabled
 shape = (padded_raster.shape[0], padded_raster.shape[1], classes)
 padded_cm = rnc.uncrop(shape, results, img_size, stride)
-cm = rnc.unpad(raster.shape,padded_cm)
+cm = rnc.unpad(raster.shape, padded_cm)
 
 cm = np.squeeze(cm)
 cm = np.rint(cm) # we are only interested in change/unchange
@@ -78,4 +77,4 @@ fig = plt.imshow(cm, cmap='gray')
 plt.axis('off')
 fig.axes.get_xaxis().set_visible(False)
 fig.axes.get_yaxis().set_visible(False)
-# plt.savefig(infres_dir + f + '_' + model_name + '.png', bbox_inches = 'tight', pad_inches = 0)
+plt.savefig(infres_dir + f + '_' + model_name + '.png', bbox_inches = 'tight', pad_inches = 0)

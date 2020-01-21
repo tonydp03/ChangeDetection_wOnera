@@ -33,7 +33,8 @@ labels_dir = '../OneraDataset_TrainLabels/'
 save_dir = '../models/'
 plot_dir = '../plots/'
 score_dir = '../scores/'
-model_name = 'EF_UNet_wbce'
+model_name = 'EF_UNet_bce'
+# model_name = 'EF_UNet_RGB'
 class_names = ['unchange', 'change']
 
 
@@ -46,10 +47,12 @@ num_crops = []
 padded_shapes = []
 
 for f in folders:
+    # raster1 = rnc.build_rasterRGB(dataset_dir + f + '/imgs_1_rect/')
     raster1 = rnc.build_raster(dataset_dir + f + '/imgs_1_rect/')
+    # raster2 = rnc.build_rasterRGB(dataset_dir + f + '/imgs_2_rect/')
     raster2 = rnc.build_raster(dataset_dir + f + '/imgs_2_rect/')
     raster = np.concatenate((raster1,raster2), axis=2)
-    padded_raster = rnc.pad(raster, img_size, stride)
+    padded_raster = rnc.pad(raster, img_size)
     shape = (padded_raster.shape[0], padded_raster.shape[1], classes)
     padded_shapes.append(shape)
     crops = rnc.crop(padded_raster, img_size, stride)
@@ -122,7 +125,7 @@ def plot_confusion_matrix(cm, classes, title='Confusion matrix', cmap=plt.cm.Blu
     fmt = '.2f'
     thresh = cm.max() / 2.
     for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        plt.text(j, i, format(cm[i, j], fmt), horizontalalignment="center", color="white" if cm[i, j] > thresh else "black", fontsize=12)
+        plt.text(j, i, format(cm[i, j], fmt), horizontalalignment="center", color="white" if cm[i, j] > thresh else "black", fontsize=14)
 
     plt.ylabel('True class', labelpad=10, fontsize=13)
     plt.xlabel('Predicted class', labelpad=10, fontsize=13)
