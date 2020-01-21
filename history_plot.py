@@ -17,18 +17,17 @@ import matplotlib.pyplot as plt
 
 plot_dir = '../plots/'
 save_dir = '../models/'
-model_name = 'EF_UNetPP_DS'
+model_name = 'EF_UNet_RGB'
 history_name = model_name + '_history'
 
-history = pd.read_hdf(save_dir + history_name + ".h5", "history").values
-
-val_loss = history[:, 0]
-val_acc =history[:,1]
-train_loss = history[:, 2]
-train_acc = history[:, 3]
-
+history = pd.read_hdf(save_dir + history_name + ".h5", "history")
 n_epochs = len(history)
 n_epochs = np.arange(1, n_epochs+1)
+
+val_loss = history['val_loss'].values
+train_loss = history['loss'].values
+val_acc = history['val_acc'].values
+train_acc = history['acc'].values
 
 fig = plt.figure()
 plt.plot(n_epochs, train_acc, '-b', label='Training')

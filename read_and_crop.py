@@ -25,6 +25,12 @@ def build_raster(folder):
     raster = np.stack(bands, axis=2)    
     return raster
 
+def build_rasterRGB(folder):
+    filenames = ['B02','B03','B04']
+    bands = [TIFF.open(folder + f + '.tif').read_image() for f in filenames]
+    raster = np.stack(bands, axis=2)    
+    return raster
+
 def pad(img, crop_size, stride):
     h, w, c = img.shape
     n_h = int(h/stride)
@@ -45,7 +51,8 @@ def crop(img, crop_size, stride):
     for i in range(n_h):
         for j in range(n_w):
             crop_img = img[(i * stride):((i * stride) + crop_size), (j * stride):((j * stride) + crop_size), :]
-            cropped_images.append(crop_img)
+            if (crop_img.shape) == (crop_size, crop_size, c):
+                cropped_images.append(crop_img)
     return cropped_images
 
 def uncrop(shape, crops, crop_size, stride):
