@@ -24,17 +24,18 @@ import itertools
 
 
 batch_size = 32
-img_size = 128
+img_size = 256
 channels = 13
-stride = 128
+stride = 256
 classes = 1
 dataset_dir = '../OneraDataset_Images/'
 labels_dir = '../OneraDataset_TrainLabels/'
 save_dir = '../models/'
 plot_dir = '../plots/'
+cm_dir = plot_dir + 'confusion_matrix/'
+roc_dir = plot_dir + 'roc/'
 score_dir = '../scores/'
-model_name = 'EF_UNet_bce'
-# model_name = 'EF_UNet_RGB'
+model_name = 'EF-UNet_256-64_sklw-bce'
 class_names = ['unchange', 'change']
 
 
@@ -65,7 +66,7 @@ unpadded_shapes = []
 for f in folders:
     cm = TIFF.open(labels_dir + f + '/cm/' + f + '-cm.tif').read_image()
     cm = np.expand_dims(cm, axis=2)
-    cm -= 1 # the change map has values 1 for no change and 2 for change ---> scale back to 0 and 1
+    cm -= 1 # the change map has values 1 for unchange and 2 for change ---> scale back to 0 and 1
     unpadded_shapes.append(cm.shape)
     cm = cm.flatten()
     train_labels.append(cm)
@@ -77,6 +78,7 @@ print(y_true.shape)
 
 # Load the model
 model = load_model(save_dir + model_name + '.h5', custom_objects={'weighted_bce_dice_loss': cdm.weighted_bce_dice_loss})
+# model = load_model(save_dir + model_name + '.h5')
 model.summary()
 
 # Perform inference
@@ -85,28 +87,33 @@ results = model.predict(inputs)
 # Build unpadded change maps 
 index = 0
 y_pred = []
+y_pred_r = [] # rounded predictions
+
 for i in range(len(folders)):
     crops = num_crops[i]
     padded_cm = rnc.uncrop(padded_shapes[i], results[index:index+crops], img_size, stride)
     cm = rnc.unpad(unpadded_shapes[i], padded_cm)
-    cm = np.rint(cm)
+    cm_r = np.rint(cm)
+    cm_r = cm_r.flatten()
     cm = cm.flatten()
     y_pred.append(cm)
+    y_pred_r.append(cm_r)
     index += crops
 
 # Flatten results
 y_pred = [item for sublist in y_pred for item in sublist]
+y_pred_r = [item for sublist in y_pred_r for item in sublist]
 y_true = [item for sublist in train_labels for item in sublist]
 
 # Print scores
 f = open(score_dir + model_name + '_scores.txt',"w+")
 
-f.write("Precision: %f\n" % precision_score(y_true, y_pred))
-f.write("Recall: %f\n" % recall_score(y_true, y_pred))
-f.write("F1: %f\n" % f1_score(y_true, y_pred))
-f.write("Balanced Accuracy: %f\n" % balanced_accuracy_score(y_true, y_pred))
-f.write("Accuracy: %f\n" % accuracy_score(y_true, y_pred))
-f.write("ROC AUC: %f\n" % roc_auc_score(y_true, y_pred))
+f.write("Precision: %f\n" % precision_score(y_true, y_pred_r))
+f.write("Recall: %f\n" % recall_score(y_true, y_pred_r))
+f.write("F1: %f\n" % f1_score(y_true, y_pred_r))
+f.write("Balanced Accuracy: %f\n" % balanced_accuracy_score(y_true, y_pred_r))
+f.write("Accuracy: %f\n" % accuracy_score(y_true, y_pred_r))
+f.write("ROC AUC: %f\n" % roc_auc_score(y_true, y_pred)) # ROC AUC Score needs non-rounded predictions!
 
 f.close()
 
@@ -133,34 +140,47 @@ def plot_confusion_matrix(cm, classes, title='Confusion matrix', cmap=plt.cm.Blu
 
 
 # Compute confusion matrix
-cnf_matrix = confusion_matrix(y_true, y_pred, normalize='true')
+cnf_matrix = confusion_matrix(y_true, y_pred_r, normalize='true')
 np.set_printoptions(precision=2)
+
+if not os.path.exists(cm_dir):
+    os.mkdir(cm_dir)
 
 # Plot normalized confusion matrix
 plt.figure()
 plot_confusion_matrix(cnf_matrix, classes=class_names, title='Confusion matrix')
-plt.savefig(plot_dir + model_name + '_confusion_matrix.pdf', format='pdf')
+plt.savefig(cm_dir + model_name + '.pdf', format='pdf')
 plt.show()
 
-'''
+
 # ROC curve
 fpr = []
 tpr = []
-roc_auc = []
 
 fpr, tpr, _ = roc_curve(y_true, y_pred)
 roc_auc = auc(fpr, tpr)
 
+if not os.path.exists(roc_dir):
+    os.mkdir(roc_dir)
+
+
 plt.figure()
 lw = 2
-plt.plot(fpr, tpr, color='darkred', lw=lw, label='ROC curve (area = %0.2f)' % roc_auc)
-plt.plot([0, 1], [0, 1], color='darkblue', lw=lw, linestyle='--')
+plt.plot(fpr, tpr, color='orangered', lw=1.5, label=model_name+' (AUC = %0.3f)' % roc_auc)
+plt.plot([0, 1], [0, 1], color='royalblue', lw=1.5, linestyle='--')
+plt.plot([0, 1], [1, 1], color='black', lw=0.7, linestyle=':')
 plt.xlim([0.0, 1.0])
 plt.ylim([0.0, 1.05])
 plt.xlabel('False Positive Rate')
 plt.ylabel('True Positive Rate')
 plt.title('ROC Curve')
 plt.legend(loc="lower right")
-plt.savefig(plot_dir + model_name + '_roccurve.pdf', format='pdf')
+plt.savefig(roc_dir + model_name + '_roc.pdf', format='pdf')
 plt.show()
-'''
+
+# Finally, save trp and fpr to file for roc curve comparison  
+
+rates = ['tpr', 'fpr']
+datas = np.stack((tpr,fpr))
+df = pd.DataFrame(datas, index = rates)
+df.to_hdf(roc_dir + model_name + '_rates.h5',"rates",complevel=0)

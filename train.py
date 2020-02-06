@@ -19,22 +19,32 @@ from keras import backend as K
 import pandas as pd
 import freeze
 import cd_models as cdm
+import argparse
+from sklearn.utils import class_weight
 
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--size', type=int, default=128)
+parser.add_argument('--stride', type=int, default=128)
+parser.add_argument('--epochs', type=int, default=50)
+parser.add_argument('--loss', type=str, default='bce')
+
+
+args = parser.parse_args()
 
 batch_size = 32
-img_size = 128
+img_size = args.size
 channels = 13
-stride = 64
+stride = args.stride
 classes = 1
-epochs = 50
+epochs = args.epochs
 dataset_dir = '../OneraDataset_Images/'
 labels_dir = '../OneraDataset_TrainLabels/'
 save_dir = '../models/'
 frozen_dir = save_dir + 'frozen_models/'
-model_name = 'EF_UNet_bce_ol64'
-# model_name = 'EF_UNetPP_DS'
+loss = args.loss
+model_name = 'EF-UNet_'+str(img_size)+'-'+str(stride)+'_'+'sklw-'+str(loss)
 history_name = model_name + '_history'
-
 
 # Get the list of folders to open to get rasters
 folders = rnc.get_folderList(dataset_dir + 'train.txt')
@@ -63,13 +73,18 @@ for f in folders:
 inputs = np.asarray(train_images)
 labels = np.asarray(train_labels)
 
-#Create the model
-# model = cdm.EF_UNetPP([img_size,img_size,2*channels], classes, True)
-model = cdm.EF_UNet([img_size,img_size,2*channels], classes)
+
+# Compute class weights
+flat_labels = np.reshape(labels,[-1])
+weights = 2*class_weight.compute_class_weight('balanced', np.unique(flat_labels), flat_labels)
+print("**** Weights: ", weights)
+
+# Create the model
+model = cdm.EF_UNet([img_size,img_size,2*channels], classes, loss)
 model.summary()
 
 # Train the model
-history = model.fit(inputs, labels, batch_size=batch_size, epochs=epochs, validation_split=0.1, callbacks=[EarlyStopping(monitor='val_loss', patience=5, verbose=1, restore_best_weights=True)], shuffle=True, verbose=1)
+history = model.fit(inputs, labels, batch_size=batch_size, epochs=epochs, class_weight=weights, validation_split=0.1, callbacks=[EarlyStopping(monitor='val_loss', patience=5, verbose=1, restore_best_weights=True)], shuffle=True, verbose=1)
 # history = model.fit(inputs, 5*[labels], batch_size=batch_size, epochs=epochs, validation_split=0.1, callbacks=[EarlyStopping(monitor='val_loss', patience=5, verbose=1, restore_best_weights=True)], shuffle=True, verbose=1)
 
 # Save the history for accuracy/loss plotting

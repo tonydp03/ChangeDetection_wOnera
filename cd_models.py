@@ -151,7 +151,7 @@ def UNet_ConvUnit(input_tensor, stage, nb_filter, kernel_size=3, mode='None'):
     return x
 
 
-def EF_UNet(input_shape, classes=1):
+def EF_UNet(input_shape, classes=1, loss='bce'):
     mode = 'None'
     nb_filter = [32, 64, 128, 256, 512]
     bn_axis = 3
@@ -195,7 +195,12 @@ def EF_UNet(input_shape, classes=1):
     output = Conv2D(classes, (1, 1), activation='sigmoid', name='output', kernel_initializer='he_normal', padding='same', kernel_regularizer=l2(1e-4))(conv9)
 
     model = Model(input=inputs, output=output)
-    model.compile(optimizer=Adam(lr=1e-4), loss ='binary_crossentropy', metrics = ['accuracy'])    
-    # model.compile(optimizer=Adam(lr=1e-4), loss =weighted_bce_dice_loss, metrics = ['accuracy'])    
 
+    if loss == 'bce':
+        loss = 'binary_crossentropy'
+    elif loss == 'wbce':
+        loss = weighted_bce_dice_loss
+
+    model.compile(optimizer=Adam(lr=1e-4), loss = loss, metrics = ['accuracy'])    
+    
     return model
